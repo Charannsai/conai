@@ -36,6 +36,8 @@ export class AgentWebSocketServer {
   private currentAgent: AgentLoop | null = null;
   private deviceInfo: DeviceInfo | null = null;
   private clients: Set<WebSocket> = new Set();
+  private isStreaming: boolean = false;
+  private streamTimeout: NodeJS.Timeout | null = null;
 
   constructor(config: WebSocketServerConfig) {
     this.config = config;
@@ -108,6 +110,14 @@ export class AgentWebSocketServer {
 
       case 'get_device_status':
         await this.handleGetDeviceStatus();
+        break;
+
+      case 'start_stream':
+        this.handleStartStream();
+        break;
+
+      case 'stop_stream':
+        this.handleStopStream();
         break;
     }
   }
@@ -265,6 +275,60 @@ export class AgentWebSocketServer {
   }
 
   /**
+   * Start live streaming screenshots.
+   */
+  private handleStartStream(): void {
+    if (this.isStreaming) return;
+    this.isStreaming = true;
+    console.log('[WS] Live stream started');
+    this.streamLoop();
+  }
+
+  /**
+   * Stop live streaming.
+   */
+  private handleStopStream(): void {
+    if (!this.isStreaming) return;
+    this.isStreaming = false;
+    if (this.streamTimeout) {
+      clearTimeout(this.streamTimeout);
+      this.streamTimeout = null;
+    }
+    console.log('[WS] Live stream stopped');
+  }
+
+  /**
+   * Background loop for streaming screenshots.
+   */
+  private async streamLoop(): Promise<void> {
+    if (!this.isStreaming) return;
+
+    try {
+      // If agent is actively running, it captures its own screenshots in its loop.
+      // We'll still allow the stream to run, but we can capture independently.
+      // However, concurrent ADB screencap commands can be slow, so ideally we shouldn't stream
+      // if the agent is heavily active, but we'll try to just take screenshots at a steady interval.
+      const deviceId = await resolveDevice(this.config.configuredDeviceId);
+      if (deviceId) {
+        const screenshot = await captureScreenshotBase64(deviceId);
+        if (this.isStreaming) {
+          this.broadcast({
+            type: 'screenshot_update',
+            screenshotBase64: screenshot,
+            timestamp: Date.now(),
+          });
+        }
+      }
+    } catch (e) {
+      // Ignore errors during stream (e.g. adb busy)
+    }
+
+    if (this.isStreaming) {
+      this.streamTimeout = setTimeout(() => this.streamLoop(), 1000); // 1 frame per second
+    }
+  }
+
+  /**
    * Send a message to a specific client.
    */
   private sendToClient(ws: WebSocket, message: ServerMessage): void {
@@ -292,6 +356,7 @@ export class AgentWebSocketServer {
     if (this.currentAgent) {
       this.currentAgent.requestStop();
     }
+    this.handleStopStream();
     this.wss.close();
   }
 }

@@ -86,8 +86,7 @@ export async function analyzeScreenAndDecideAction(params: {
           },
         ],
         response_format: {
-          type: 'json_schema',
-          json_schema: actionSchema,
+          type: 'json_object',
         } as any,
         temperature: 0.1,
         max_tokens: 1024,

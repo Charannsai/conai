@@ -6,22 +6,47 @@ interface DeviceStatusProps {
   connected: boolean;
   device: DeviceInfo | null;
   onRefresh: () => void;
+  isStreaming?: boolean;
+  onStartStream?: () => void;
+  onStopStream?: () => void;
 }
 
-export function DeviceStatus({ connected, device, onRefresh }: DeviceStatusProps) {
+export function DeviceStatus({
+  connected,
+  device,
+  onRefresh,
+  isStreaming,
+  onStartStream,
+  onStopStream,
+}: DeviceStatusProps) {
   return (
     <div className="glass-card p-5">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary">
           Device
         </h2>
-        <button
-          onClick={onRefresh}
-          className="text-xs text-text-muted hover:text-accent-cyan transition-colors"
-          title="Refresh device status"
-        >
-          ↻ Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          {connected && onStartStream && onStopStream && (
+            <button
+              onClick={isStreaming ? onStopStream : onStartStream}
+              className={`text-xs font-medium px-2 py-1 rounded transition-colors ${
+                isStreaming
+                  ? "bg-status-error/20 text-status-error hover:bg-status-error/30"
+                  : "bg-accent-cyan/10 text-accent-cyan hover:bg-accent-cyan/20"
+              }`}
+              title={isStreaming ? "Stop Live Stream" : "Start Live Stream"}
+            >
+              {isStreaming ? "⏹ Stop Stream" : "▶ Live Stream"}
+            </button>
+          )}
+          <button
+            onClick={onRefresh}
+            className="text-xs text-text-muted hover:text-accent-cyan transition-colors"
+            title="Refresh device status"
+          >
+            ↻ Refresh
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center gap-3">

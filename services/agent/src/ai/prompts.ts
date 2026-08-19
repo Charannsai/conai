@@ -94,5 +94,20 @@ You must choose exactly ONE action from the following:
 - NEVER attempt to delete data or uninstall apps.
 
 ## OUTPUT FORMAT
-Respond with a JSON object containing your decision. The "thinking" field should briefly explain your reasoning.`;
+Respond ONLY with a valid JSON object matching this schema:
+{
+  "thinking": "string (brief reasoning about what you see on screen and why you chose this action)",
+  "action": "string (one of: tap, swipe, type, back, home, launch_app, wait, finish, fail)",
+  "x": "number (optional, for tap)",
+  "y": "number (optional, for tap)",
+  "x1": "number (optional, for swipe)",
+  "y1": "number (optional, for swipe)",
+  "x2": "number (optional, for swipe)",
+  "y2": "number (optional, for swipe)",
+  "duration_ms": "number (optional, for swipe or wait)",
+  "text": "string (optional, for type)",
+  "package": "string (optional, for launch_app)",
+  "reason": "string (optional, for fail or debug)"
+}
+Your entire response must be a single JSON object.`;
 }

@@ -163,8 +163,18 @@ export const GetDeviceStatusSchema = z.object({
   type: z.literal('get_device_status'),
 });
 
+export const StartStreamSchema = z.object({
+  type: z.literal('start_stream'),
+});
+
+export const StopStreamSchema = z.object({
+  type: z.literal('stop_stream'),
+});
+
 export const ClientMessageSchema = z.discriminatedUnion('type', [
   StartTaskSchema,
   StopAgentSchema,
   GetDeviceStatusSchema,
+  StartStreamSchema,
+  StopStreamSchema,
 ]);

@@ -214,7 +214,17 @@ export interface GetDeviceStatusMessage {
   type: 'get_device_status';
 }
 
+export interface StartStreamMessage {
+  type: 'start_stream';
+}
+
+export interface StopStreamMessage {
+  type: 'stop_stream';
+}
+
 export type ClientMessage =
   | StartTaskMessage
   | StopAgentMessage
-  | GetDeviceStatusMessage;
+  | GetDeviceStatusMessage
+  | StartStreamMessage
+  | StopStreamMessage;

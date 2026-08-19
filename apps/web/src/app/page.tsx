@@ -20,6 +20,9 @@ export default function Dashboard() {
     startTask,
     stopAgent,
     refreshDevice,
+    isStreaming,
+    startStream,
+    stopStream,
   } = useAgentSocket();
 
   return (
@@ -81,6 +84,9 @@ export default function Dashboard() {
               connected={connected}
               device={device}
               onRefresh={refreshDevice}
+              isStreaming={isStreaming}
+              onStartStream={startStream}
+              onStopStream={stopStream}
             />
 
             <TaskInput

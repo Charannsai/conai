@@ -85,6 +85,9 @@ interface UseAgentSocketReturn {
   startTask: (goal: string) => void;
   stopAgent: () => void;
   refreshDevice: () => void;
+  isStreaming: boolean;
+  startStream: () => void;
+  stopStream: () => void;
 }
 
 const WS_URL = "ws://localhost:4000";
@@ -100,6 +103,7 @@ export function useAgentSocket(): UseAgentSocketReturn {
   const [thinking, setThinking] = useState<string | null>(null);
   const [actionLog, setActionLog] = useState<ActionHistoryEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
 
   const connect = useCallback(() => {
     if (ws.current?.readyState === WebSocket.OPEN) return;
@@ -211,6 +215,16 @@ export function useAgentSocket(): UseAgentSocketReturn {
     sendMessage({ type: "get_device_status" });
   }, [sendMessage]);
 
+  const startStream = useCallback(() => {
+    setIsStreaming(true);
+    sendMessage({ type: "start_stream" });
+  }, [sendMessage]);
+
+  const stopStream = useCallback(() => {
+    setIsStreaming(false);
+    sendMessage({ type: "stop_stream" });
+  }, [sendMessage]);
+
   return {
     connected,
     device,
@@ -222,5 +236,8 @@ export function useAgentSocket(): UseAgentSocketReturn {
     startTask,
     stopAgent,
     refreshDevice,
+    isStreaming,
+    startStream,
+    stopStream,
   };
 }
