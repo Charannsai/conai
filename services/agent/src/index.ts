@@ -6,7 +6,22 @@
 // with the Android device via ADB.
 // ============================================================
 
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+
+// Load environment variables (support both .env and .env.local like Next.js)
+const envLocalPath = path.resolve(process.cwd(), '../../.env.local');
+const envPath = path.resolve(process.cwd(), '../../.env');
+
+if (fs.existsSync(envLocalPath)) {
+  dotenv.config({ path: envLocalPath });
+} else if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+} else {
+  // Fallback to local package directory .env
+  dotenv.config();
+}
 import { initGroqClient } from './ai/groq.js';
 import { AgentWebSocketServer } from './server/websocket.js';
 import { getConnectedDevices } from './adb/device.js';
