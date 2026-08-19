@@ -30,6 +30,11 @@
     },
     "plugins": [
       "./withAndroidServices.js"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9aace47f-f1a5-4645-9d76-e940b09c10e4"
+      }
+    }
   }
 }
