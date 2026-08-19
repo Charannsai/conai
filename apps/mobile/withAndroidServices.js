@@ -1,6 +1,6 @@
 const { withAndroidManifest, withDangerousMod } = require("@expo/config-plugins");
 
-module.exports = function withAndroidServices(config) {
+const withAndroidServices = (config) => {
   return withAndroidManifest(config, (config) => {
     const androidManifest = config.modResults;
     const application = androidManifest.manifest.application[0];
