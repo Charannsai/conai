@@ -74,5 +74,27 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         print(f"Error in websocket loop: {e}")
 
+@app.websocket("/ws/strategy")
+async def strategy_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    print("Node.js Strategic Agent connected")
+    try:
+        while True:
+            # Receive strategy from Node.js (e.g. {"strategy": "ENGAGE"})
+            data = await websocket.receive_text()
+            try:
+                payload = json.loads(data)
+                if "strategy" in payload:
+                    controller.current_strategy = payload["strategy"]
+                    print(f"Strategy updated to: {controller.current_strategy}")
+            except json.JSONDecodeError:
+                pass
+                
+            # Periodically we could push game_state to Node.js here
+            await websocket.send_text(json.dumps({"state": engine.state}))
+            
+    except WebSocketDisconnect:
+        print("Strategic Agent disconnected")
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
