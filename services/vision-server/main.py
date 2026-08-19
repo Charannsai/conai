@@ -50,6 +50,9 @@ class TacticalController:
 engine = GameStateEngine()
 controller = TacticalController()
 
+# Store active web clients
+web_clients = set()
+
 @app.websocket("/ws/agent")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -58,6 +61,17 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             # 1. Receive Frame (Binary)
             frame_bytes = await websocket.receive_bytes()
+            
+            # Forward frame to all connected web clients
+            disconnected_clients = set()
+            for client in web_clients:
+                try:
+                    await client.send_bytes(frame_bytes)
+                except Exception:
+                    disconnected_clients.add(client)
+            
+            for dc in disconnected_clients:
+                web_clients.remove(dc)
             
             # 2. Vision Engine -> Game State
             state = engine.process_frame(frame_bytes)
@@ -73,6 +87,19 @@ async def websocket_endpoint(websocket: WebSocket):
         print("Android Agent disconnected")
     except Exception as e:
         print(f"Error in websocket loop: {e}")
+
+@app.websocket("/ws/stream")
+async def stream_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    print("Web Dashboard connected to stream")
+    web_clients.add(websocket)
+    try:
+        while True:
+            # Keep connection alive
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        print("Web Dashboard disconnected")
+        web_clients.remove(websocket)
 
 @app.websocket("/ws/strategy")
 async def strategy_endpoint(websocket: WebSocket):
