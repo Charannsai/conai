@@ -7,6 +7,7 @@ import { ScreenViewer } from "./components/ScreenViewer";
 import { AgentStatus } from "./components/AgentStatus";
 import { ActionLog } from "./components/ActionLog";
 import { StopButton } from "./components/StopButton";
+import { useVideoStream } from "./hooks/useVideoStream";
 
 export default function Dashboard() {
   const {
@@ -24,6 +25,8 @@ export default function Dashboard() {
     startStream,
     stopStream,
   } = useAgentSocket();
+
+  const { frame: videoFrame, connected: isStreamConnected } = useVideoStream();
 
   return (
     <div className="min-h-screen bg-surface-primary">
@@ -104,7 +107,7 @@ export default function Dashboard() {
 
           {/* Center column — Phone Screen */}
           <div className="lg:col-span-4">
-            <ScreenViewer screenshot={screenshot} thinking={thinking} />
+            <ScreenViewer screenshot={videoFrame || screenshot} thinking={thinking} />
           </div>
 
           {/* Right column — Action Log */}

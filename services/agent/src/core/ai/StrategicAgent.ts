@@ -6,6 +6,7 @@ import { FreeFireSkill, type AppSkill } from '../skills/FreeFireSkill.js';
 export class StrategicAgent extends EventEmitter {
     private isPlanning = false;
     private currentSkill: AppSkill | null = null;
+    private recentStrategies: string[] = [];
 
     constructor(
         private session: AgentSession,
@@ -51,12 +52,24 @@ export class StrategicAgent extends EventEmitter {
 
             // Map standard actions to Strategies based on AppSkill
             let strategy = "EXPLORE";
-            const allowedStrategies = this.currentSkill?.getStrategies() || ["ENGAGE", "ROTATE"];
+            const allowedStrategies = this.currentSkill?.getStrategies() || ["ENGAGE", "ROTATE", "EXPLORE"];
 
             if (response.action === "tap" && response.thinking.toLowerCase().includes("enemy") && allowedStrategies.includes("ENGAGE")) {
                 strategy = "ENGAGE";
             } else if (response.action === "swipe" && allowedStrategies.includes("ROTATE")) {
                 strategy = "ROTATE";
+            }
+
+            // Anti-stuck Recovery
+            this.recentStrategies.push(strategy);
+            if (this.recentStrategies.length > 5) this.recentStrategies.shift();
+
+            // If we've chosen the exact same strategy 5 times in a row, force EXPLORE
+            const allSame = this.recentStrategies.length === 5 && this.recentStrategies.every(s => s === strategy);
+            if (allSame && strategy !== "EXPLORE") {
+                console.warn("[Agent] Stuck pattern detected. Forcing EXPLORE strategy.");
+                strategy = "EXPLORE";
+                this.recentStrategies = []; // Reset history
             }
 
             this.emit('strategy_changed', strategy);
