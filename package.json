@@ -1,0 +1,17 @@
+{
+  "name": "ai-mobile-operator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI agent that can see and operate an Android phone through real touch interactions",
+  "scripts": {
+    "dev": "concurrently \"pnpm dev:agent\" \"pnpm dev:web\"",
+    "dev:web": "pnpm --filter web dev",
+    "dev:agent": "pnpm --filter agent dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3"
+  }
+}
