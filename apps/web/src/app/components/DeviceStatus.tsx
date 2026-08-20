@@ -6,9 +6,9 @@ interface DeviceStatusProps {
   connected: boolean;
   device: DeviceInfo | null;
   onRefresh: () => void;
-  isStreaming?: boolean;
-  onStartStream?: () => void;
-  onStopStream?: () => void;
+  isStreaming: boolean;
+  onStartStream: () => void;
+  onStopStream: () => void;
 }
 
 export function DeviceStatus({
@@ -20,68 +20,42 @@ export function DeviceStatus({
   onStopStream,
 }: DeviceStatusProps) {
   return (
-    <div className="glass-card p-5">
+    <div className="card p-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary">
+        <h2 className="text-xs font-medium uppercase tracking-widest text-text-muted">
           Device
         </h2>
-        <div className="flex items-center gap-3">
-          {connected && onStartStream && onStopStream && (
-            <button
-              onClick={isStreaming ? onStopStream : onStartStream}
-              className={`text-xs font-medium px-2 py-1 rounded transition-colors ${
-                isStreaming
-                  ? "bg-status-error/20 text-status-error hover:bg-status-error/30"
-                  : "bg-accent-cyan/10 text-accent-cyan hover:bg-accent-cyan/20"
-              }`}
-              title={isStreaming ? "Stop Live Stream" : "Start Live Stream"}
-            >
-              {isStreaming ? "⏹ Stop Stream" : "▶ Live Stream"}
-            </button>
-          )}
-          <button
-            onClick={onRefresh}
-            className="text-xs text-text-muted hover:text-accent-cyan transition-colors"
-            title="Refresh device status"
-          >
-            ↻ Refresh
-          </button>
-        </div>
+        <button
+          onClick={onRefresh}
+          className="text-[10px] text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+        >
+          Refresh
+        </button>
       </div>
 
-      <div className="flex items-center gap-3">
-        {/* Status indicator */}
-        <div className="relative">
-          <div
-            className={`w-3 h-3 rounded-full ${
-              connected && device
-                ? "bg-status-success pulse-connected"
-                : "bg-status-error"
-            }`}
-          />
+      {device ? (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className={`w-1.5 h-1.5 rounded-full ${device.connected ? "bg-status-success" : "bg-status-error"}`} />
+            <span className="text-sm font-medium text-text-primary">{device.model}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-[11px] text-text-secondary">
+            <div>
+              <span className="text-text-muted">Android </span>
+              {device.androidVersion}
+            </div>
+            <div>
+              <span className="text-text-muted">Screen </span>
+              {device.screenWidth}×{device.screenHeight}
+            </div>
+          </div>
+          <div className="text-[10px] text-text-muted font-mono truncate">
+            {device.id}
+          </div>
         </div>
-
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-text-primary truncate">
-            {connected && device
-              ? device.model
-              : connected
-                ? "No device found"
-                : "Disconnected"}
-          </p>
-          {connected && device && (
-            <p className="text-xs text-text-muted mt-0.5">
-              Android {device.androidVersion} · {device.screenWidth}×
-              {device.screenHeight}
-            </p>
-          )}
-          {!connected && (
-            <p className="text-xs text-status-error mt-0.5">
-              Agent server not running
-            </p>
-          )}
-        </div>
-      </div>
+      ) : (
+        <p className="text-xs text-text-muted">No device connected</p>
+      )}
     </div>
   );
 }

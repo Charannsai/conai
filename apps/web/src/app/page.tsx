@@ -7,7 +7,6 @@ import { ScreenViewer } from "./components/ScreenViewer";
 import { AgentStatus } from "./components/AgentStatus";
 import { ActionLog } from "./components/ActionLog";
 import { StopButton } from "./components/StopButton";
-import { useVideoStream } from "./hooks/useVideoStream";
 
 export default function Dashboard() {
   const {
@@ -26,62 +25,53 @@ export default function Dashboard() {
     stopStream,
   } = useAgentSocket();
 
-  const { frame: videoFrame, connected: isStreamConnected } = useVideoStream();
-
   return (
     <div className="min-h-screen bg-surface-primary">
       {/* Header */}
       <header className="border-b border-border-subtle">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg gradient-accent flex items-center justify-center">
-                <span className="text-white text-sm font-bold">AI</span>
+              <div className="w-7 h-7 rounded-md bg-accent-primary flex items-center justify-center">
+                <span className="text-white text-[11px] font-bold tracking-tight">AI</span>
               </div>
               <div>
-                <h1 className="text-lg font-bold gradient-accent-text">
+                <h1 className="text-sm font-semibold text-text-primary tracking-tight">
                   AI Mobile Operator
                 </h1>
-                <p className="text-xs text-text-muted">
-                  Observe · Reason · Act · Verify
+                <p className="text-[11px] text-text-muted">
+                  Observe · Reason · Act
                 </p>
               </div>
             </div>
 
-            {/* Connection status pill */}
-            <div
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
-                connected
-                  ? "bg-status-success/10 text-status-success"
-                  : "bg-status-error/10 text-status-error"
-              }`}
-            >
+            <div className="flex items-center gap-2">
               <div
-                className={`w-2 h-2 rounded-full ${
-                  connected
-                    ? "bg-status-success pulse-connected"
-                    : "bg-status-error"
+                className={`w-1.5 h-1.5 rounded-full ${
+                  connected ? "bg-status-success pulse-connected" : "bg-status-error"
                 }`}
               />
-              {connected ? "Server Connected" : "Server Offline"}
+              <span className="text-[11px] text-text-muted">
+                {connected ? "Connected" : "Offline"}
+              </span>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Global error banner */}
+      {/* Error banner */}
       {error && (
-        <div className="bg-status-error/10 border-b border-status-error/20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-            <p className="text-sm text-status-error">{error}</p>
+        <div className="border-b border-status-error/20 bg-status-error/5">
+          <div className="max-w-7xl mx-auto px-6 py-2">
+            <p className="text-xs text-status-error">{error}</p>
           </div>
         </div>
       )}
 
-      {/* Main content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Main */}
+      <main className="max-w-7xl mx-auto px-6 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left column — Controls & Status */}
+          {/* Left — Controls */}
           <div className="lg:col-span-4 space-y-4">
             <DeviceStatus
               connected={connected}
@@ -91,26 +81,17 @@ export default function Dashboard() {
               onStartStream={startStream}
               onStopStream={stopStream}
             />
-
-            <TaskInput
-              onStartTask={startTask}
-              agentStatus={agentState?.status}
-            />
-
-            <StopButton
-              onStop={stopAgent}
-              agentStatus={agentState?.status}
-            />
-
+            <TaskInput onStartTask={startTask} agentStatus={agentState?.status} />
+            <StopButton onStop={stopAgent} agentStatus={agentState?.status} />
             <AgentStatus state={agentState} />
           </div>
 
-          {/* Center column — Phone Screen */}
+          {/* Center — Phone */}
           <div className="lg:col-span-4">
-            <ScreenViewer screenshot={videoFrame || screenshot} thinking={thinking} />
+            <ScreenViewer screenshot={screenshot} thinking={thinking} />
           </div>
 
-          {/* Right column — Action Log */}
+          {/* Right — Log */}
           <div className="lg:col-span-4">
             <ActionLog entries={actionLog} />
           </div>
@@ -119,14 +100,10 @@ export default function Dashboard() {
 
       {/* Footer */}
       <footer className="border-t border-border-subtle mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between text-xs text-text-muted">
-            <span>AI Mobile Operator MVP</span>
-            <span>
-              Powered by{" "}
-              <span className="gradient-accent-text font-medium">Groq</span>{" "}
-              · Qwen 3.6 27B
-            </span>
+        <div className="max-w-7xl mx-auto px-6 py-3">
+          <div className="flex items-center justify-between text-[11px] text-text-muted">
+            <span>AI Mobile Operator</span>
+            <span>Powered by Groq</span>
           </div>
         </div>
       </footer>

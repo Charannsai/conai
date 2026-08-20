@@ -36,6 +36,8 @@ export class AgentLoop extends EventEmitter {
   private config: AgentLoopConfig;
   private session: AgentSession;
   private stopRequested: boolean = false;
+  private consecutiveErrors: number = 0;
+  private static MAX_CONSECUTIVE_ERRORS = 5;
 
   constructor(config: AgentLoopConfig) {
     super();
@@ -63,6 +65,11 @@ export class AgentLoop extends EventEmitter {
     console.log(`[Agent] Starting task: "${this.config.goal}"`);
     this.session.setStatus('running');
 
+    // Always start from Home screen for a clean state
+    console.log('[Agent] Pressing Home to start from launcher...');
+    await pressHome(this.config.deviceId);
+    await new Promise(r => setTimeout(r, 1000));
+
     while (!this.stopRequested && !this.session.isTerminated()) {
       try {
         // 1. Get current app context
@@ -77,6 +84,20 @@ export class AgentLoop extends EventEmitter {
         const gameDetected = await isGameApp(this.config.deviceId, currentApp);
 
         if (gameDetected) {
+          // If we're in a game but the goal doesn't mention gaming keywords,
+          // the user probably wants to do something else — go Home first
+          const goalLower = this.config.goal.toLowerCase();
+          const isGameGoal = ['game', 'play', 'free fire', 'freefire', 'pubg', 'match', 'battle'].some(
+            kw => goalLower.includes(kw)
+          );
+
+          if (!isGameGoal) {
+            console.log(`[Agent] Step ${step}: Game detected (${currentApp}) but goal is not game-related. Pressing Home.`);
+            await pressHome(this.config.deviceId);
+            await new Promise(r => setTimeout(r, 1000));
+            continue;
+          }
+
           // ---- VISION PATH (games/custom renderers) ----
           console.log(`[Agent] Step ${step}: Vision mode (game: ${currentApp})`);
           this.emit('agent_thinking', { thinking: 'Using Vision AI (game detected)...', step });
@@ -96,6 +117,12 @@ export class AgentLoop extends EventEmitter {
         } else {
           // ---- UI TREE PATH (regular apps) ----
           console.log(`[Agent] Step ${step}: UI Tree mode (app: ${currentApp})`);
+
+          // Always capture a screenshot for the dashboard live preview
+          try {
+            const screenshot = await captureScreenshotBase64(this.config.deviceId);
+            this.emit('screenshot_update', screenshot);
+          } catch { /* non-critical */ }
 
           const { formattedText, hasInteractiveElements } = await getUITree(this.config.deviceId);
 
@@ -161,11 +188,16 @@ export class AgentLoop extends EventEmitter {
           thinking: response.thinking,
         });
 
+        // Reset error counter on success
+        this.consecutiveErrors = 0;
+
         // 8. Check terminal conditions
         if (response.action === 'finish') {
+          console.log('[Agent] ✅ Task completed!');
           this.session.setStatus('completed');
           break;
         } else if (response.action === 'fail') {
+          console.log(`[Agent] ❌ Task failed: ${response.reason}`);
           this.session.setStatus('failed', response.reason);
           break;
         } else if (this.session.isOverStepLimit()) {
@@ -174,7 +206,14 @@ export class AgentLoop extends EventEmitter {
         }
 
       } catch (e: any) {
-        console.error('[Agent] Step failed:', e?.message || e);
+        this.consecutiveErrors++;
+        console.error(`[Agent] Step failed (${this.consecutiveErrors}/${AgentLoop.MAX_CONSECUTIVE_ERRORS}):`, e?.message || e);
+
+        if (this.consecutiveErrors >= AgentLoop.MAX_CONSECUTIVE_ERRORS) {
+          this.session.setStatus('failed', `Too many consecutive errors: ${e?.message}`);
+          break;
+        }
+
         // Retry on transient/API errors and malformed AI responses
         if (e?.status === 400 || e?.status === 429 || e?.issues) {
           console.warn('[Agent] Retrying after error...');

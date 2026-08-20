@@ -1,42 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import type { AgentStatus } from "../hooks/useAgentSocket";
 
 interface TaskInputProps {
   onStartTask: (goal: string) => void;
-  agentStatus: AgentStatus | undefined;
+  agentStatus?: AgentStatus;
 }
 
-const EXAMPLE_TASKS = [
-  "Open Calculator and calculate 25 × 16",
-  "Open Chrome and search for AI agents",
-  "Open YouTube and search for AI agents",
-  "Open Settings and go to About Phone",
+const SUGGESTIONS = [
+  "Open Settings and check battery",
+  "Open X and tweet a random joke",
+  "Open Chrome and search for weather",
+  "Open Calculator and compute 42 × 17",
 ];
 
 export function TaskInput({ onStartTask, agentStatus }: TaskInputProps) {
   const [goal, setGoal] = useState("");
+  const isRunning = agentStatus === "running" || agentStatus === "thinking" || agentStatus === "acting";
 
-  const isRunning =
-    agentStatus === "running" ||
-    agentStatus === "thinking" ||
-    agentStatus === "acting";
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (goal.trim() && !isRunning) {
-      onStartTask(goal.trim());
-    }
-  };
-
-  const handleExampleClick = (task: string) => {
-    setGoal(task);
-  };
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      if (goal.trim() && !isRunning) {
+        onStartTask(goal.trim());
+      }
+    },
+    [goal, isRunning, onStartTask]
+  );
 
   return (
-    <div className="glass-card p-5">
-      <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary mb-3">
+    <div className="card p-4">
+      <h2 className="text-xs font-medium uppercase tracking-widest text-text-muted mb-3">
         Task
       </h2>
 
@@ -46,44 +41,33 @@ export function TaskInput({ onStartTask, agentStatus }: TaskInputProps) {
             type="text"
             value={goal}
             onChange={(e) => setGoal(e.target.value)}
-            placeholder="Tell the agent what to do..."
+            placeholder="What should the agent do?"
             disabled={isRunning}
-            className="w-full bg-surface-elevated border border-border-default rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-cyan focus:ring-1 focus:ring-accent-cyan/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            id="task-input"
+            className="w-full px-3 py-2.5 text-sm bg-surface-secondary border border-border-subtle rounded-lg text-text-primary placeholder:text-text-muted disabled:opacity-50 transition-colors"
           />
         </div>
 
         <button
           type="submit"
           disabled={!goal.trim() || isRunning}
-          className="w-full mt-3 gradient-accent text-white font-semibold py-3 px-6 rounded-xl text-sm transition-all hover:opacity-90 hover:shadow-lg hover:shadow-accent-cyan/20 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:shadow-none"
-          id="start-agent-button"
+          className="w-full mt-2 px-3 py-2 text-xs font-medium bg-accent-primary text-white rounded-lg disabled:opacity-30 hover:bg-accent-secondary transition-colors cursor-pointer disabled:cursor-not-allowed"
         >
-          {isRunning ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className="thinking-dot inline-block w-1.5 h-1.5 rounded-full bg-white" />
-              <span className="thinking-dot inline-block w-1.5 h-1.5 rounded-full bg-white" />
-              <span className="thinking-dot inline-block w-1.5 h-1.5 rounded-full bg-white" />
-              <span className="ml-1">Agent Running</span>
-            </span>
-          ) : (
-            "▶ Start Agent"
-          )}
+          {isRunning ? "Running..." : "Start Task"}
         </button>
       </form>
 
-      {/* Example tasks */}
-      <div className="mt-4">
-        <p className="text-xs text-text-muted mb-2">Try an example:</p>
-        <div className="flex flex-wrap gap-2">
-          {EXAMPLE_TASKS.map((task) => (
+      <div className="mt-3">
+        <p className="text-[10px] text-text-muted mb-1.5">Suggestions</p>
+        <div className="flex flex-wrap gap-1.5">
+          {SUGGESTIONS.map((s) => (
             <button
-              key={task}
-              onClick={() => handleExampleClick(task)}
+              key={s}
+              type="button"
+              onClick={() => setGoal(s)}
               disabled={isRunning}
-              className="text-xs px-3 py-1.5 rounded-lg bg-surface-elevated border border-border-subtle text-text-secondary hover:text-accent-cyan hover:border-accent-cyan/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              className="text-[10px] px-2 py-1 rounded-md border border-border-subtle text-text-secondary hover:border-accent-primary hover:text-text-primary transition-colors disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
             >
-              {task}
+              {s}
             </button>
           ))}
         </div>
