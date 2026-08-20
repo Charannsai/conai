@@ -109,5 +109,14 @@ Respond ONLY with a valid JSON object matching this schema:
   "package": "string (optional, for launch_app)",
   "reason": "string (optional, for fail or debug)"
 }
-Your entire response must be a single JSON object.`;
+
+Example valid response for a tap:
+{
+  "thinking": "I need to open the Twitter app. I see the icon at coordinates (386, 928).",
+  "action": "tap",
+  "x": 386,
+  "y": 928
+}
+
+Your entire response must be a single, valid JSON object without markdown formatting like \`\`\`json. Do not combine x and y into a single field or tuple.`;
 }

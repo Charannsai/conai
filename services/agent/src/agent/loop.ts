@@ -3,6 +3,7 @@ import WebSocket from 'ws';
 import { AgentSession } from './state.js';
 import { StrategicAgent } from '../core/ai/StrategicAgent.js';
 import type { DeviceInfo } from '@conai/shared';
+import { captureScreenshotBase64 } from '../adb/screenshot.js';
 
 export interface AgentLoopConfig {
   deviceId: string;
@@ -76,8 +77,16 @@ export class AgentLoop extends EventEmitter {
           const gameState = payload.state;
           this.emit('game_state', gameState);
 
+          // Capture actual screenshot for the Vision AI
+          let screenshot = "";
+          try {
+            screenshot = await captureScreenshotBase64(this.config.deviceId);
+          } catch (e) {
+            console.error('[Agent] Failed to capture screenshot for vision', e);
+          }
+
           // Evaluate strategy
-          const newStrategy = await this.strategicAgent.evaluateGameState(gameState, "");
+          const newStrategy = await this.strategicAgent.evaluateGameState(gameState, screenshot);
           if (newStrategy) {
             // Push new strategy to Python Tactical Controller
             this.ws?.send(JSON.stringify({ strategy: newStrategy }));

@@ -20,6 +20,9 @@ importers:
       expo:
         specifier: ~57.0.14
         version: 57.0.14(@babel/core@7.29.7)(@expo/dom-webview@57.0.1)(react-dom@19.2.8(react@19.2.3))(react-native@0.86.2(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
+      expo-linear-gradient:
+        specifier: ^57.0.1
+        version: 57.0.1(expo@57.0.14)(react-native@0.86.2(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       expo-status-bar:
         specifier: ~57.0.1
         version: 57.0.1(expo@57.0.14)(react-native@0.86.2(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
@@ -2186,6 +2189,13 @@ packages:
     peerDependencies:
       expo: '*'
       react: '*'
+
+  expo-linear-gradient@57.0.1:
+    resolution: {integrity: sha512-CpS8eMqoIWcHVGKV66zbDvzotCw9qYp3f8CuI9N+h1LaO0tMLUzBpkhAKePUsXlpN3yolYlHFSPkfVZ/uSh+iA==}
+    peerDependencies:
+      expo: '*'
+      react: '*'
+      react-native: '*'
 
   expo-modules-autolinking@57.0.10:
     resolution: {integrity: sha512-jNqLswMx8QHN8VXRgud+xT+9q+J9U63CEGlx+k4V/IE9Qyt9HrKbWp+pIDma0fOquta5HBfSfsShcI+NkEpTiA==}
@@ -6484,6 +6494,12 @@ snapshots:
     dependencies:
       expo: 57.0.14(@babel/core@7.29.7)(@expo/dom-webview@57.0.1)(react-dom@19.2.8(react@19.2.3))(react-native@0.86.2(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
       react: 19.2.3
+
+  expo-linear-gradient@57.0.1(expo@57.0.14)(react-native@0.86.2(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3):
+    dependencies:
+      expo: 57.0.14(@babel/core@7.29.7)(@expo/dom-webview@57.0.1)(react-dom@19.2.8(react@19.2.3))(react-native@0.86.2(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
+      react: 19.2.3
+      react-native: 0.86.2(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3)
 
   expo-modules-autolinking@57.0.10(typescript@6.0.3):
     dependencies:
