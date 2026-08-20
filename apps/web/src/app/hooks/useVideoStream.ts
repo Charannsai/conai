@@ -10,33 +10,49 @@ export function useVideoStream() {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    const socket = new WebSocket(WS_STREAM_URL);
-    socket.binaryType = "blob";
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+    let isUnmounted = false;
 
-    socket.onopen = () => {
-      setConnected(true);
-      console.log("[WS] Connected to video stream");
+    const connect = () => {
+      if (isUnmounted) return;
+      const socket = new WebSocket(WS_STREAM_URL);
+      socket.binaryType = "blob";
+
+      socket.onopen = () => {
+        setConnected(true);
+        console.log("[WS] Connected to video stream");
+      };
+
+      socket.onmessage = (event) => {
+        if (event.data instanceof Blob) {
+          const url = URL.createObjectURL(event.data);
+          setFrame((prevUrl) => {
+            if (prevUrl) URL.revokeObjectURL(prevUrl);
+            return url;
+          });
+        }
+      };
+
+      socket.onclose = () => {
+        setConnected(false);
+        if (!isUnmounted) {
+          reconnectTimeout = setTimeout(connect, 2000);
+        }
+      };
+
+      socket.onerror = () => {
+        socket.close();
+      };
+
+      ws.current = socket;
     };
 
-    socket.onmessage = (event) => {
-      // Create object URL from binary blob (much faster than base64)
-      if (event.data instanceof Blob) {
-        const url = URL.createObjectURL(event.data);
-        setFrame((prevUrl) => {
-          if (prevUrl) URL.revokeObjectURL(prevUrl); // cleanup
-          return url;
-        });
-      }
-    };
-
-    socket.onclose = () => {
-      setConnected(false);
-    };
-
-    ws.current = socket;
+    connect();
 
     return () => {
-      socket.close();
+      isUnmounted = true;
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      ws.current?.close();
     };
   }, []);
 

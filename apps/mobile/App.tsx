@@ -7,12 +7,30 @@ const { AgentModule } = NativeModules;
 
 export default function App() {
   const [accessibilityEnabled, setAccessibilityEnabled] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const appState = useRef(AppState.currentState);
 
   const checkPermissions = async () => {
     if (AgentModule && AgentModule.checkAccessibilityPermission) {
       const isEnabled = await AgentModule.checkAccessibilityPermission();
       setAccessibilityEnabled(isEnabled);
+    }
+  };
+
+  const toggleScreenCapture = async () => {
+    if (!AgentModule) return;
+    if (capturing) {
+      AgentModule.stopScreenCapture();
+      setCapturing(false);
+    } else {
+      try {
+        const started = await AgentModule.requestScreenCapture();
+        if (started) {
+          setCapturing(true);
+        }
+      } catch (err) {
+        console.error("Screen capture error", err);
+      }
     }
   };
 
@@ -44,6 +62,7 @@ export default function App() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Agent Core Services</Text>
           
+          {/* Tactical Controller Service */}
           <View style={styles.serviceRow}>
             <View>
               <Text style={styles.serviceName}>Tactical Controller</Text>
@@ -67,6 +86,31 @@ export default function App() {
               </LinearGradient>
             </TouchableOpacity>
           )}
+
+          {/* Real-time Video Streamer */}
+          <View style={[styles.serviceRow, { marginTop: 20 }]}>
+            <View>
+              <Text style={styles.serviceName}>Live Video Streamer</Text>
+              <Text style={styles.serviceDesc}>60 FPS hardware screen mirror</Text>
+            </View>
+            <View style={[styles.statusBadge, capturing ? styles.statusEnabled : styles.statusDisabled]}>
+              <Text style={styles.statusText}>{capturing ? "STREAMING" : "OFFLINE"}</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.button}
+            onPress={toggleScreenCapture}
+          >
+            <LinearGradient
+              colors={capturing ? ['#ff4757', '#e84118'] : ['#00d2d3', '#01a3a4']}
+              style={styles.buttonGradient}
+            >
+              <Text style={styles.buttonText}>
+                {capturing ? "Stop Live Video Stream" : "Start Live Video Stream (60 FPS)"}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -124,7 +168,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 12,
   },
   serviceName: {
     fontSize: 16,
@@ -158,12 +202,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   buttonGradient: {
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: 'center',
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
   }
 });
