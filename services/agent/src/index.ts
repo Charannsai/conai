@@ -23,6 +23,7 @@ if (fs.existsSync(envLocalPath)) {
   dotenv.config();
 }
 import { initGroqClient } from './ai/groq.js';
+import { initTextClient } from './ai/textAgent.js';
 import { AgentWebSocketServer } from './server/websocket.js';
 import { getConnectedDevices } from './adb/device.js';
 
@@ -32,6 +33,7 @@ import { getConnectedDevices } from './adb/device.js';
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_VISION_MODEL = process.env.GROQ_VISION_MODEL || 'qwen/qwen3.6-27b';
+const GROQ_TEXT_MODEL = process.env.GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile';
 const WS_PORT = parseInt(process.env.WS_PORT || '4000', 10);
 const ADB_DEVICE_ID = process.env.ADB_DEVICE_ID || 'auto';
 const AGENT_MAX_STEPS = parseInt(process.env.AGENT_MAX_STEPS || '30', 10);
@@ -59,7 +61,8 @@ async function main(): Promise<void> {
 
   // Initialize Groq client
   initGroqClient(GROQ_API_KEY);
-  console.log(`✅ Groq client initialized (model: ${GROQ_VISION_MODEL})`);
+  initTextClient(GROQ_API_KEY);
+  console.log(`✅ Groq client initialized (vision: ${GROQ_VISION_MODEL}, text: ${GROQ_TEXT_MODEL})`);
 
   // Check for connected devices
   try {
@@ -81,6 +84,7 @@ async function main(): Promise<void> {
     port: WS_PORT,
     configuredDeviceId: ADB_DEVICE_ID,
     visionModel: GROQ_VISION_MODEL,
+    textModel: GROQ_TEXT_MODEL,
     maxSteps: AGENT_MAX_STEPS,
     stepDelayMs: AGENT_STEP_DELAY_MS,
     actionTimeoutMs: AGENT_ACTION_TIMEOUT_MS,
@@ -90,6 +94,7 @@ async function main(): Promise<void> {
   console.log(`🚀 Agent server running on ws://localhost:${WS_PORT}`);
   console.log(`📱 Device ID: ${ADB_DEVICE_ID}`);
   console.log(`🧠 Vision model: ${GROQ_VISION_MODEL}`);
+  console.log(`📝 Text model: ${GROQ_TEXT_MODEL}`);
   console.log(`📊 Max steps: ${AGENT_MAX_STEPS}`);
   console.log('');
   console.log('Open the web dashboard at http://localhost:3000');

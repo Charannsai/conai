@@ -141,8 +141,10 @@ export class AgentLoop extends EventEmitter {
           console.warn(`[Agent] Action validation failed: ${validation.error}`);
           this.session.addHistoryEntry({
             step,
-            action: { action: 'fail', thinking: response.thinking, reason: validation.error },
+            action: { action: 'fail', reason: validation.error || 'Validation failed' },
             timestamp: Date.now(),
+            success: false,
+            thinking: response.thinking,
           });
           continue;
         }
@@ -155,6 +157,8 @@ export class AgentLoop extends EventEmitter {
           step,
           action: response,
           timestamp: Date.now(),
+          success: true,
+          thinking: response.thinking,
         });
 
         // 8. Check terminal conditions

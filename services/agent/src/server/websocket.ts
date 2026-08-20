@@ -25,6 +25,7 @@ export interface WebSocketServerConfig {
   port: number;
   configuredDeviceId: string;
   visionModel: string;
+  textModel: string;
   maxSteps: number;
   stepDelayMs: number;
   actionTimeoutMs: number;
@@ -170,6 +171,7 @@ export class AgentWebSocketServer {
       stepDelayMs: this.config.stepDelayMs,
       actionTimeoutMs: this.config.actionTimeoutMs,
       visionModel: this.config.visionModel,
+      textModel: this.config.textModel,
     };
 
     this.currentAgent = new AgentLoop(agentConfig);
