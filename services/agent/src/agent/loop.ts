@@ -175,9 +175,9 @@ export class AgentLoop extends EventEmitter {
 
       } catch (e: any) {
         console.error('[Agent] Step failed:', e?.message || e);
-        // Don't immediately fail — retry on transient errors
-        if (e?.status === 400 || e?.status === 429) {
-          console.warn('[Agent] Retrying after API error...');
+        // Retry on transient/API errors and malformed AI responses
+        if (e?.status === 400 || e?.status === 429 || e?.issues) {
+          console.warn('[Agent] Retrying after error...');
           await new Promise(r => setTimeout(r, 3000));
           continue;
         }

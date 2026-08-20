@@ -28,39 +28,14 @@ const KNOWN_GAME_PACKAGES: string[] = [
 ];
 
 /**
- * Check if the current app is a game by:
- * 1. Matching against known game package list
- * 2. Checking if the app uses SurfaceView/GLSurfaceView (OpenGL rendering)
+ * Check if the current app is a game.
+ * Uses a conservative approach: only known game packages.
+ * The SurfaceView heuristic is too unreliable (Twitter, YouTube,
+ * video editors all use SurfaceView for media playback).
  */
 export async function isGameApp(
   deviceId: string,
   currentPackage: string
 ): Promise<boolean> {
-  // Quick check: known games
-  if (KNOWN_GAME_PACKAGES.some(pkg => currentPackage.startsWith(pkg))) {
-    return true;
-  }
-
-  // Heuristic: Check if the app has any SurfaceView layers
-  // Games typically render via SurfaceView/GLSurfaceView
-  try {
-    const surfaces = await adb(
-      ['shell', 'dumpsys', 'SurfaceFlinger', '--list'],
-      deviceId
-    );
-    
-    const appSurfaces = surfaces
-      .split('\n')
-      .filter(line => line.includes(currentPackage));
-    
-    // If the app has a SurfaceView but no standard Android views,
-    // it's likely a game
-    const hasSurfaceView = appSurfaces.some(
-      line => line.includes('SurfaceView') || line.includes('GLSurfaceView')
-    );
-    
-    return hasSurfaceView;
-  } catch {
-    return false;
-  }
+  return KNOWN_GAME_PACKAGES.some(pkg => currentPackage.startsWith(pkg));
 }
