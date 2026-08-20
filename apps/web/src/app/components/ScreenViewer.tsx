@@ -36,7 +36,7 @@ export function ScreenViewer({ screenshot, thinking }: ScreenViewerProps) {
             <img
               src={displaySrc}
               alt="Phone screen"
-              className="w-full h-full object-contain animate-fade-in"
+              className="w-full h-full object-contain"
               draggable={false}
             />
           ) : (

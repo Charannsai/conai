@@ -2,8 +2,9 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 import uvicorn
 import json
 import asyncio
-import cv2
-import numpy as np
+import subprocess
+import threading
+import time
 
 app = FastAPI()
 
@@ -18,14 +19,6 @@ class GameStateEngine:
         }
 
     def process_frame(self, frame_bytes: bytes):
-        # Convert bytes to numpy array then to OpenCV image
-        # nparr = np.frombuffer(frame_bytes, np.uint8)
-        # img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
-        # Here we would run YOLO/OpenCV object detection.
-        # For MVP, we will simulate detecting an enemy if the frame isn't empty.
-        
-        # Simulated Vision Output:
         self.state["enemies"] = [
             {"x": 650, "y": 420, "confidence": 0.88}
         ]
@@ -36,10 +29,8 @@ class TacticalController:
         self.current_strategy = "ENGAGE"
 
     def determine_action(self, game_state):
-        # Extremely basic tactical loop: If there is an enemy, aim/shoot.
         if self.current_strategy == "ENGAGE" and len(game_state["enemies"]) > 0:
             enemy = game_state["enemies"][0]
-            # Send a swipe command to move crosshair towards enemy, or tap to shoot.
             return {
                 "type": "tap",
                 "x": enemy["x"],
@@ -50,74 +41,115 @@ class TacticalController:
 engine = GameStateEngine()
 controller = TacticalController()
 
-# Store active web clients
 web_clients = set()
+agent_connected = False
+adb_stream_task = None
+
+async def adb_streamer():
+    """Fallback continuous frame streamer via ADB when mobile app capture is idle."""
+    global web_clients, agent_connected
+    print("[VisionServer] Starting ADB live stream loop...")
+    
+    while True:
+        if not web_clients:
+            await asyncio.sleep(0.5)
+            continue
+
+        if agent_connected:
+            # Native app is streaming at 60 FPS, pause ADB stream
+            await asyncio.sleep(0.5)
+            continue
+
+        try:
+            # Capture frame via ADB exec-out screencap directly into memory
+            proc = await asyncio.create_subprocess_exec(
+                "adb", "exec-out", "screencap", "-p",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL
+            )
+            stdout, _ = await proc.communicate()
+
+            if stdout and len(stdout) > 100 and stdout[:4] == b'\x89PNG':
+                # Broadcast frame bytes to all web clients
+                disconnected = set()
+                for client in list(web_clients):
+                    try:
+                        await client.send_bytes(stdout)
+                    except Exception:
+                        disconnected.add(client)
+
+                for dc in disconnected:
+                    web_clients.discard(dc)
+        except Exception as e:
+            pass
+
+        # Smooth frame pacing
+        await asyncio.sleep(0.08)
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(adb_streamer())
 
 @app.websocket("/ws/agent")
 async def websocket_endpoint(websocket: WebSocket):
+    global agent_connected
     await websocket.accept()
-    print("Android Agent connected to Vision Server")
+    agent_connected = True
+    print("✅ Android Native Agent connected to Vision Server (60 FPS mode active)")
     try:
         while True:
-            # 1. Receive Frame (Binary)
             frame_bytes = await websocket.receive_bytes()
             
-            # Forward frame to all connected web clients
+            # Forward live frame to all connected web clients
             disconnected_clients = set()
-            for client in web_clients:
+            for client in list(web_clients):
                 try:
                     await client.send_bytes(frame_bytes)
                 except Exception:
                     disconnected_clients.add(client)
             
             for dc in disconnected_clients:
-                web_clients.remove(dc)
+                web_clients.discard(dc)
             
-            # 2. Vision Engine -> Game State
             state = engine.process_frame(frame_bytes)
-            
-            # 3. Tactical Controller -> Action
             action = controller.determine_action(state)
-            
-            # 4. Send action back to Android
             if action:
                 await websocket.send_text(json.dumps(action))
                 
     except WebSocketDisconnect:
-        print("Android Agent disconnected")
+        print("Android Native Agent disconnected")
     except Exception as e:
         print(f"Error in websocket loop: {e}")
+    finally:
+        agent_connected = False
 
 @app.websocket("/ws/stream")
 async def stream_endpoint(websocket: WebSocket):
     await websocket.accept()
-    print("Web Dashboard connected to stream")
+    print(f"Web Dashboard connected to live stream ({len(web_clients) + 1} total)")
     web_clients.add(websocket)
     try:
         while True:
-            # Keep connection alive
+            # Keep-alive
             await websocket.receive_text()
     except WebSocketDisconnect:
-        print("Web Dashboard disconnected")
-        web_clients.remove(websocket)
+        print("Web Dashboard disconnected from live stream")
+        web_clients.discard(websocket)
 
 @app.websocket("/ws/strategy")
 async def strategy_endpoint(websocket: WebSocket):
     await websocket.accept()
-    print("Node.js Strategic Agent connected")
+    print("Strategic Agent connected")
     try:
         while True:
-            # Receive strategy from Node.js (e.g. {"strategy": "ENGAGE"})
             data = await websocket.receive_text()
             try:
                 payload = json.loads(data)
                 if "strategy" in payload:
                     controller.current_strategy = payload["strategy"]
-                    print(f"Strategy updated to: {controller.current_strategy}")
             except json.JSONDecodeError:
                 pass
                 
-            # Periodically we could push game_state to Node.js here
             await websocket.send_text(json.dumps({"state": engine.state}))
             
     except WebSocketDisconnect:
