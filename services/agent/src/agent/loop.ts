@@ -1,9 +1,11 @@
 import { EventEmitter } from 'events';
-import WebSocket from 'ws';
 import { AgentSession } from './state.js';
-import { StrategicAgent } from '../core/ai/StrategicAgent.js';
-import type { DeviceInfo } from '@conai/shared';
+import type { DeviceInfo, AIActionResponse } from '@conai/shared';
 import { captureScreenshotBase64 } from '../adb/screenshot.js';
+import { analyzeScreenAndDecideAction } from '../ai/groq.js';
+import { tap, swipe, typeText, pressBack, pressHome, pressEnter } from '../adb/input.js';
+import { getCurrentApp, launchApp } from '../adb/app.js';
+import { validateAction } from './validator.js';
 
 export interface AgentLoopConfig {
   deviceId: string;
@@ -11,25 +13,22 @@ export interface AgentLoopConfig {
   goal: string;
   maxSteps: number;
   visionModel: string;
+  stepDelayMs?: number;
+  actionTimeoutMs?: number;
 }
 
 export class AgentLoop extends EventEmitter {
   private config: AgentLoopConfig;
   private session: AgentSession;
-  private strategicAgent: StrategicAgent;
   private stopRequested: boolean = false;
-  private ws: WebSocket | null = null;
-  private strategyInterval: NodeJS.Timeout | null = null;
 
   constructor(config: AgentLoopConfig) {
     super();
     this.config = config;
     this.session = new AgentSession(config.goal, config.maxSteps);
-    this.strategicAgent = new StrategicAgent(this.session, config.visionModel);
 
     this.session.on('status_change', (state) => this.emit('status_change', state));
-    this.strategicAgent.on('thinking', (msg) => this.emit('agent_thinking', { thinking: msg, step: this.session.state.currentStep }));
-    this.strategicAgent.on('strategy_changed', (strategy) => this.emit('strategy_changed', strategy));
+    this.session.on('action_executed', (entry) => this.emit('action_executed', entry));
   }
 
   getState() {
@@ -42,76 +41,82 @@ export class AgentLoop extends EventEmitter {
 
   requestStop(): void {
     this.stopRequested = true;
-    if (this.ws) {
-      this.ws.close();
-    }
-    if (this.strategyInterval) {
-      clearInterval(this.strategyInterval);
-    }
     console.log('[Agent] Stop requested');
   }
 
   async run(): Promise<void> {
-    console.log(`[Agent] Starting V2 task: "${this.config.goal}"`);
+    console.log(`[Agent] Starting task: "${this.config.goal}"`);
     this.session.setStatus('running');
 
-    // Connect to Python Vision Server
-    this.ws = new WebSocket('ws://127.0.0.1:8000/ws/strategy');
-
-    this.ws.on('open', () => {
-      console.log('[Agent] Connected to Python Vision Server');
-      // Initialize strategy evaluation loop (e.g. every 5 seconds)
-      this.strategyInterval = setInterval(() => {
-        if (this.stopRequested) return;
-        // Ping for game state
-        this.ws?.send(JSON.stringify({ action: 'get_state' }));
-      }, 5000);
-    });
-
-    this.ws.on('message', async (data) => {
-      if (this.stopRequested) return;
-      try {
-        const payload = JSON.parse(data.toString());
-        if (payload.state) {
-          // Received Game State from Python
-          const gameState = payload.state;
-          this.emit('game_state', gameState);
-
-          // Capture actual screenshot for the Vision AI
-          let screenshot = "";
-          try {
-            screenshot = await captureScreenshotBase64(this.config.deviceId);
-          } catch (e) {
-            console.error('[Agent] Failed to capture screenshot for vision', e);
-          }
-
-          // Evaluate strategy
-          const newStrategy = await this.strategicAgent.evaluateGameState(gameState, screenshot);
-          if (newStrategy) {
-            // Push new strategy to Python Tactical Controller
-            this.ws?.send(JSON.stringify({ strategy: newStrategy }));
-          }
-        }
-      } catch (e) {
-        console.error('[Agent] Failed to parse message from Vision Server', e);
-      }
-    });
-
-    this.ws.on('close', () => {
-      console.log('[Agent] Disconnected from Python Vision Server');
-      if (!this.stopRequested) {
-        this.session.setStatus('failed', 'Lost connection to Vision Server');
-      }
-    });
-
-    this.ws.on('error', (err) => {
-      console.error('[Agent] WebSocket error:', err);
-      this.session.setStatus('failed', 'WebSocket error with Vision Server');
-    });
-
-    // Wait until stop is requested or failed
     while (!this.stopRequested && !this.session.isTerminated()) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      try {
+        // 1. Capture screen
+        const screenshot = await captureScreenshotBase64(this.config.deviceId);
+        this.emit('screenshot_update', screenshot);
+
+        // 2. Get current app context
+        const currentApp = await getCurrentApp(this.config.deviceId);
+        this.session.setCurrentApp(currentApp);
+
+        // 3. Increment step
+        const step = this.session.nextStep();
+
+        // 4. Think & Decide Action
+        const response = await analyzeScreenAndDecideAction({
+          screenshotBase64: screenshot,
+          goal: this.config.goal,
+          currentApp,
+          previousActions: this.session.getRecentActionsSummary(),
+          currentStep: step,
+          maxSteps: this.config.maxSteps,
+          model: this.config.visionModel,
+        });
+
+        this.emit('agent_thinking', { thinking: response.thinking, step });
+
+        // Validate action bounds
+        const validation = validateAction(response, this.config.device.screenWidth, this.config.device.screenHeight);
+        if (!validation.valid) {
+          console.warn(`[Agent] Action validation failed: ${validation.error}`);
+          // We record it as a fail step and continue to let the AI try again next tick
+          this.session.addHistoryEntry({
+            step,
+            action: { action: 'fail', thinking: response.thinking, reason: validation.error },
+            timestamp: Date.now(),
+          });
+          continue;
+        }
+
+        // 5. Execute Action
+        await this.executeAction(response);
+
+        // 6. Record in history
+        this.session.addHistoryEntry({
+          step,
+          action: response,
+          timestamp: Date.now(),
+        });
+
+        // 7. Check terminal conditions
+        if (response.action === 'finish') {
+          this.session.setStatus('completed');
+          break;
+        } else if (response.action === 'fail') {
+          this.session.setStatus('failed', response.reason);
+          break;
+        } else if (this.session.isOverStepLimit()) {
+          this.session.setStatus('failed', 'Exceeded maximum steps');
+          break;
+        }
+
+      } catch (e: any) {
+        console.error('[Agent] Step failed:', e);
+        this.session.setStatus('failed', `Error: ${e.message}`);
+        break;
+      }
+      
+      // Delay before next step
+      await new Promise(r => setTimeout(r, this.config.stepDelayMs || 1500));
     }
 
     if (this.stopRequested && !this.session.isTerminated()) {
@@ -122,5 +127,46 @@ export class AgentLoop extends EventEmitter {
       state: this.session.state,
       history: this.session.history,
     });
+  }
+
+  private async executeAction(action: AIActionResponse): Promise<void> {
+    const d = this.config.deviceId;
+    switch (action.action) {
+      case 'tap':
+        if (action.x !== undefined && action.y !== undefined) {
+          await tap(d, action.x, action.y);
+        }
+        break;
+      case 'swipe':
+        if (action.x1 !== undefined && action.y1 !== undefined && action.x2 !== undefined && action.y2 !== undefined) {
+          await swipe(d, action.x1, action.y1, action.x2, action.y2, action.duration_ms);
+        }
+        break;
+      case 'type':
+        if (action.text) {
+          await typeText(d, action.text);
+          await pressEnter(d);
+        }
+        break;
+      case 'back':
+        await pressBack(d);
+        break;
+      case 'home':
+        await pressHome(d);
+        break;
+      case 'launch_app':
+        if (action.package) {
+          await launchApp(d, action.package);
+        }
+        break;
+      case 'wait':
+        const ms = action.duration_ms || 1500;
+        await new Promise(r => setTimeout(r, ms));
+        break;
+      case 'finish':
+      case 'fail':
+        // Handled in main loop
+        break;
+    }
   }
 }

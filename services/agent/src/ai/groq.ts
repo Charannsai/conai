@@ -97,7 +97,24 @@ export async function analyzeScreenAndDecideAction(params: {
         throw new Error('Empty response from Groq');
       }
 
-      const parsed = JSON.parse(content);
+      let cleanContent = content;
+      
+      // Qwen reasoning models on Groq sometimes output </think> without an opening tag
+      // and output multiple JSON blocks. We want the last one.
+      if (cleanContent.includes('</think>')) {
+        cleanContent = cleanContent.split('</think>').pop() || cleanContent;
+      }
+      
+      cleanContent = cleanContent.trim();
+      
+      // Remove markdown formatting if present
+      if (cleanContent.startsWith('```json')) {
+        cleanContent = cleanContent.replace(/^```json/, '').replace(/```$/, '').trim();
+      } else if (cleanContent.startsWith('```')) {
+        cleanContent = cleanContent.replace(/^```/, '').replace(/```$/, '').trim();
+      }
+
+      const parsed = JSON.parse(cleanContent);
       const validated = AIActionResponseSchema.parse(parsed);
       return validated as AIActionResponse;
     } catch (error: any) {

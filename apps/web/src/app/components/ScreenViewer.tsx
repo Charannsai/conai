@@ -1,15 +1,26 @@
 "use client";
 
+import { useVideoStream } from "../hooks/useVideoStream";
+
 interface ScreenViewerProps {
   screenshot: string | null;
   thinking: string | null;
 }
 
 export function ScreenViewer({ screenshot, thinking }: ScreenViewerProps) {
+  const { frame, connected } = useVideoStream();
+  
+  const displaySrc = frame || (screenshot ? `data:image/png;base64,${screenshot}` : null);
+
   return (
     <div className="flex flex-col items-center">
-      <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary mb-3 self-start">
+      <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary mb-3 self-start flex items-center">
         Live Screen
+        {connected && (
+          <span className="ml-2 text-[9px] bg-status-error text-white px-1.5 py-0.5 rounded shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-pulse">
+            LIVE
+          </span>
+        )}
       </h2>
 
       <div className="phone-frame w-full max-w-[320px]">
@@ -20,9 +31,9 @@ export function ScreenViewer({ screenshot, thinking }: ScreenViewerProps) {
 
         {/* Screen */}
         <div className="relative bg-black rounded-2xl overflow-hidden aspect-[9/19.5]">
-          {screenshot ? (
+          {displaySrc ? (
             <img
-              src={`data:image/png;base64,${screenshot}`}
+              src={displaySrc}
               alt="Phone screen"
               className="w-full h-full object-contain animate-fade-in"
               draggable={false}
