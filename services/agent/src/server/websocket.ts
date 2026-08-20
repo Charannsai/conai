@@ -51,11 +51,8 @@ export class AgentWebSocketServer {
       console.log('[WS] Client connected');
       this.clients.add(ws);
 
-      // Send current device status on connect
-      this.sendToClient(ws, {
-        type: 'device_status',
-        device: this.deviceInfo,
-      });
+      // Automatically query device info & grab first screenshot for live display
+      this.handleGetDeviceStatus().catch(() => {});
 
       // If agent is running, send current state
       if (this.currentAgent) {

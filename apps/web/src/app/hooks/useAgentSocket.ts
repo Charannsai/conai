@@ -115,6 +115,8 @@ export function useAgentSocket(): UseAgentSocketReturn {
         setConnected(true);
         setError(null);
         console.log("[WS] Connected to agent server");
+        // Request device status & initial screenshot immediately
+        socket.send(JSON.stringify({ type: "get_device_status" }));
       };
 
       socket.onclose = () => {

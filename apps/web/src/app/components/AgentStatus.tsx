@@ -8,139 +8,129 @@ interface AgentStatusProps {
 
 const STATUS_CONFIG: Record<
   string,
-  { label: string; color: string; bgColor: string; icon: string }
+  { label: string; color: string; bg: string; dot: string }
 > = {
   idle: {
     label: "Idle",
     color: "text-text-muted",
-    bgColor: "bg-text-muted/10",
-    icon: "○",
+    bg: "bg-surface-secondary",
+    dot: "bg-neutral-400",
   },
   running: {
     label: "Running",
-    color: "text-accent-cyan",
-    bgColor: "bg-accent-cyan/10",
-    icon: "●",
+    color: "text-text-primary",
+    bg: "bg-neutral-100",
+    dot: "bg-black animate-pulse",
   },
   thinking: {
     label: "Thinking",
-    color: "text-status-info",
-    bgColor: "bg-status-info/10",
-    icon: "◐",
+    color: "text-text-primary",
+    bg: "bg-neutral-100",
+    dot: "bg-black animate-pulse",
   },
   acting: {
     label: "Acting",
-    color: "text-accent-teal",
-    bgColor: "bg-accent-teal/10",
-    icon: "▸",
+    color: "text-text-primary",
+    bg: "bg-neutral-100",
+    dot: "bg-black",
   },
   completed: {
     label: "Completed",
     color: "text-status-success",
-    bgColor: "bg-status-success/10",
-    icon: "✓",
+    bg: "bg-emerald-50",
+    dot: "bg-status-success",
   },
   failed: {
     label: "Failed",
     color: "text-status-error",
-    bgColor: "bg-status-error/10",
-    icon: "✗",
+    bg: "bg-red-50",
+    dot: "bg-status-error",
   },
   stopped: {
     label: "Stopped",
     color: "text-status-warning",
-    bgColor: "bg-status-warning/10",
-    icon: "■",
+    bg: "bg-amber-50",
+    dot: "bg-status-warning",
   },
 };
 
 export function AgentStatus({ state }: AgentStatusProps) {
   if (!state) {
     return (
-      <div className="glass-card p-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary mb-3">
-          Agent Status
+      <div className="card p-4">
+        <h2 className="text-xs font-medium uppercase tracking-widest text-text-muted mb-2">
+          Status
         </h2>
-        <p className="text-sm text-text-muted">
-          No task started yet
-        </p>
+        <p className="text-xs text-text-muted">No task running</p>
       </div>
     );
   }
 
   const statusConfig = STATUS_CONFIG[state.status] || STATUS_CONFIG.idle;
   const elapsed = state.startedAt
-    ? Math.floor(
-        ((state.completedAt || Date.now()) - state.startedAt) / 1000
-      )
+    ? Math.floor(((state.completedAt || Date.now()) - state.startedAt) / 1000)
     : 0;
 
   return (
-    <div className="glass-card p-5">
-      <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary mb-3">
-        Agent Status
-      </h2>
-
-      {/* Status badge */}
-      <div className="flex items-center gap-2 mb-4">
-        <span
-          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${statusConfig.color} ${statusConfig.bgColor}`}
-        >
-          <span>{statusConfig.icon}</span>
+    <div className="card p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xs font-medium uppercase tracking-widest text-text-muted">
+          Status
+        </h2>
+        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${statusConfig.color} ${statusConfig.bg}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${statusConfig.dot}`} />
           {statusConfig.label}
-        </span>
+        </div>
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* Steps */}
-        <div className="bg-surface-elevated rounded-xl p-3">
-          <p className="text-xs text-text-muted mb-1">Steps</p>
-          <p className="text-lg font-bold gradient-accent-text">
-            {state.currentStep}
-            <span className="text-xs text-text-muted font-normal">
-              {" "}
-              / {state.maxSteps}
-            </span>
+      {/* Goal */}
+      {state.goal && (
+        <div className="bg-surface-secondary p-2.5 rounded-lg border border-border-subtle">
+          <p className="text-[10px] text-text-muted uppercase tracking-wider mb-0.5">Goal</p>
+          <p className="text-xs text-text-primary font-medium line-clamp-2 leading-relaxed">
+            {state.goal}
           </p>
-          {/* Progress bar */}
-          <div className="mt-2 h-1 bg-surface-card rounded-full overflow-hidden">
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-surface-secondary p-2.5 rounded-lg border border-border-subtle">
+          <p className="text-[10px] text-text-muted uppercase tracking-wider mb-0.5">Steps</p>
+          <p className="text-sm font-semibold text-text-primary">
+            {state.currentStep} <span className="text-xs font-normal text-text-muted">/ {state.maxSteps}</span>
+          </p>
+          <div className="mt-1.5 h-1 bg-neutral-200 rounded-full overflow-hidden">
             <div
-              className="h-full gradient-accent rounded-full transition-all duration-500"
+              className="h-full bg-accent-primary rounded-full transition-all duration-300"
               style={{
-                width: `${Math.min(
-                  (state.currentStep / state.maxSteps) * 100,
-                  100
-                )}%`,
+                width: `${Math.min((state.currentStep / state.maxSteps) * 100, 100)}%`,
               }}
             />
           </div>
         </div>
 
-        {/* Time */}
-        <div className="bg-surface-elevated rounded-xl p-3">
-          <p className="text-xs text-text-muted mb-1">Elapsed</p>
-          <p className="text-lg font-bold text-text-primary">
-            {formatTime(elapsed)}
-          </p>
+        <div className="bg-surface-secondary p-2.5 rounded-lg border border-border-subtle">
+          <p className="text-[10px] text-text-muted uppercase tracking-wider mb-0.5">Elapsed</p>
+          <p className="text-sm font-semibold text-text-primary">{formatTime(elapsed)}</p>
         </div>
       </div>
 
-      {/* Current app */}
+      {/* Current App */}
       {state.currentApp && state.currentApp !== "unknown" && (
-        <div className="mt-3 bg-surface-elevated rounded-xl p-3">
-          <p className="text-xs text-text-muted mb-1">Current App</p>
-          <p className="text-sm text-text-primary font-mono truncate">
+        <div className="flex items-center justify-between text-xs px-1 text-text-secondary">
+          <span className="text-text-muted">Active App</span>
+          <span className="font-mono text-[11px] text-text-primary truncate max-w-[180px]">
             {state.currentApp}
-          </p>
+          </span>
         </div>
       )}
 
       {/* Error */}
       {state.error && (
-        <div className="mt-3 bg-status-error/10 border border-status-error/20 rounded-xl p-3">
-          <p className="text-xs text-status-error font-medium mb-1">Error</p>
-          <p className="text-xs text-status-error/80">{state.error}</p>
+        <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-status-error text-xs">
+          <p className="font-medium mb-0.5">Error</p>
+          <p className="text-[11px] opacity-90">{state.error}</p>
         </div>
       )}
     </div>

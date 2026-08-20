@@ -18,10 +18,11 @@ export function StopButton({ onStop, agentStatus }: StopButtonProps) {
   return (
     <button
       onClick={onStop}
-      className="w-full py-3 px-6 rounded-xl text-sm font-bold text-white bg-status-error hover:bg-red-600 transition-all stop-button-pulse"
+      className="w-full py-2.5 px-4 rounded-lg text-xs font-semibold text-white bg-status-error hover:bg-red-700 transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
       id="stop-agent-button"
     >
-      ■ STOP AGENT
+      <span className="w-2 h-2 rounded-sm bg-white" />
+      Stop Agent
     </button>
   );
 }

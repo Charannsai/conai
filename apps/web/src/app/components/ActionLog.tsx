@@ -9,41 +9,17 @@ interface ActionLogProps {
 
 const ACTION_STYLES: Record<
   ActionType,
-  { color: string; bgColor: string; icon: string }
+  { label: string; tagClass: string }
 > = {
-  tap: { color: "text-action-tap", bgColor: "bg-action-tap/10", icon: "👆" },
-  swipe: {
-    color: "text-action-swipe",
-    bgColor: "bg-action-swipe/10",
-    icon: "👉",
-  },
-  type: {
-    color: "text-action-type",
-    bgColor: "bg-action-type/10",
-    icon: "⌨️",
-  },
-  back: { color: "text-action-nav", bgColor: "bg-action-nav/10", icon: "◀" },
-  home: { color: "text-action-nav", bgColor: "bg-action-nav/10", icon: "🏠" },
-  launch_app: {
-    color: "text-action-launch",
-    bgColor: "bg-action-launch/10",
-    icon: "🚀",
-  },
-  wait: {
-    color: "text-action-wait",
-    bgColor: "bg-action-wait/10",
-    icon: "⏳",
-  },
-  finish: {
-    color: "text-action-finish",
-    bgColor: "bg-action-finish/10",
-    icon: "✅",
-  },
-  fail: {
-    color: "text-action-fail",
-    bgColor: "bg-action-fail/10",
-    icon: "❌",
-  },
+  tap: { label: "TAP", tagClass: "bg-neutral-100 text-neutral-800 border-neutral-200" },
+  swipe: { label: "SWIPE", tagClass: "bg-neutral-100 text-neutral-800 border-neutral-200" },
+  type: { label: "TYPE", tagClass: "bg-emerald-50 text-emerald-800 border-emerald-200" },
+  back: { label: "BACK", tagClass: "bg-neutral-100 text-neutral-600 border-neutral-200" },
+  home: { label: "HOME", tagClass: "bg-neutral-100 text-neutral-600 border-neutral-200" },
+  launch_app: { label: "LAUNCH", tagClass: "bg-purple-50 text-purple-800 border-purple-200" },
+  wait: { label: "WAIT", tagClass: "bg-amber-50 text-amber-800 border-amber-200" },
+  finish: { label: "FINISH", tagClass: "bg-emerald-50 text-emerald-800 border-emerald-200" },
+  fail: { label: "FAIL", tagClass: "bg-red-50 text-red-800 border-red-200" },
 };
 
 function formatActionDetails(entry: ActionHistoryEntry): string {
@@ -70,7 +46,6 @@ function formatActionDetails(entry: ActionHistoryEntry): string {
 export function ActionLog({ entries }: ActionLogProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom on new entries
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -78,14 +53,14 @@ export function ActionLog({ entries }: ActionLogProps) {
   }, [entries]);
 
   return (
-    <div className="glass-card p-5 flex flex-col" style={{ maxHeight: "500px" }}>
+    <div className="card p-4 flex flex-col" style={{ maxHeight: "560px" }}>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary">
+        <h2 className="text-xs font-medium uppercase tracking-widest text-text-muted">
           Action Log
         </h2>
         {entries.length > 0 && (
-          <span className="text-xs text-text-muted">
-            {entries.length} action{entries.length !== 1 ? "s" : ""}
+          <span className="text-[11px] text-text-muted">
+            {entries.length} step{entries.length !== 1 ? "s" : ""}
           </span>
         )}
       </div>
@@ -95,57 +70,50 @@ export function ActionLog({ entries }: ActionLogProps) {
         className="flex-1 overflow-y-auto custom-scrollbar space-y-2"
       >
         {entries.length === 0 ? (
-          <p className="text-sm text-text-muted py-4 text-center">
+          <div className="py-12 text-center text-xs text-text-muted">
             Actions will appear here as the agent runs.
-          </p>
+          </div>
         ) : (
           entries.map((entry, i) => {
             const style = ACTION_STYLES[entry.action.action] || ACTION_STYLES.tap;
             return (
               <div
                 key={`${entry.step}-${i}`}
-                className={`action-entry flex items-start gap-3 p-3 rounded-xl ${style.bgColor} border border-transparent hover:border-border-subtle transition-colors`}
+                className="action-entry p-2.5 rounded-lg border border-border-subtle bg-surface-secondary text-xs space-y-1.5"
               >
-                {/* Step number */}
-                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-surface-elevated flex items-center justify-center">
-                  <span className="text-xs font-bold text-text-secondary">
-                    {entry.step}
-                  </span>
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">{style.icon}</span>
-                    <span className={`text-sm font-medium ${style.color}`}>
-                      {entry.action.action}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-4 h-4 rounded-full bg-neutral-200 text-neutral-700 flex items-center justify-center text-[10px] font-bold">
+                      {entry.step}
                     </span>
-                    <span className="text-xs text-text-muted font-mono truncate">
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${style.tagClass}`}>
+                      {style.label}
+                    </span>
+                    <span className="font-mono text-[11px] text-text-secondary truncate max-w-[140px]">
                       {formatActionDetails(entry)}
                     </span>
                   </div>
 
-                  {/* Thinking */}
-                  <p className="text-xs text-text-muted mt-1 leading-relaxed line-clamp-2">
-                    {entry.thinking}
-                  </p>
-
-                  {/* Failure indicator */}
-                  {!entry.success && (
-                    <span className="inline-block text-xs text-status-error mt-1">
-                      ⚠ Action failed
-                    </span>
-                  )}
+                  <span className="text-[10px] text-text-muted">
+                    {new Date(entry.timestamp).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                    })}
+                  </span>
                 </div>
 
-                {/* Timestamp */}
-                <span className="text-xs text-text-muted flex-shrink-0">
-                  {new Date(entry.timestamp).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  })}
-                </span>
+                {entry.thinking && (
+                  <p className="text-[11px] text-text-secondary leading-relaxed bg-white p-2 rounded border border-border-subtle/60">
+                    {entry.thinking}
+                  </p>
+                )}
+
+                {!entry.success && (
+                  <p className="text-[10px] text-status-error font-medium">
+                    ⚠ Action did not succeed
+                  </p>
+                )}
               </div>
             );
           })
